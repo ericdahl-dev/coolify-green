@@ -1,0 +1,74 @@
+version: 2
+
+project_name: coolify-green
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+    main: .
+
+archives:
+  - formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
+
+# Casks, not formulas: goreleaser deprecated `brews` in v2.10 and removes it
+# in v2.16, and the release workflow tracks "~> v2". Homebrew's cask support
+# targets macOS; on Linux use `go install` or the release tarballs.
+homebrew_casks:
+  - name: coolify-green
+    binaries:
+      - coolify-green
+    directory: Casks
+    repository:
+      owner: ericdahl-dev
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: "https://github.com/ericdahl-dev/coolify-green"
+    description: "Terminal dashboard for live Coolify deploy and resource health"
+    url:
+      verified: "github.com/ericdahl-dev/coolify-green/"
+    # The released binaries are neither signed nor notarized, so Gatekeeper
+    # quarantines them on download and the cask will not launch without this.
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/coolify-green"]
+          end
+
+release:
+  github:
+    owner: ericdahl-dev
+    name: coolify-green
