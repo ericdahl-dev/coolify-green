@@ -178,6 +178,10 @@ so an expired token is not reported as a fleet-wide outage.
 `event` is `deployment_stuck` or `resource_stuck`; `reason` is one of `deploy_failed`,
 `deploy_in_progress`, `resource_down`, `resource_unhealthy`.
 
+An instance whose API fetch keeps failing past the threshold (a revoked token, an unreachable host)
+sends `event` and `reason` `fetch_failed`, with `resource_type` `instance` and the error in `detail`.
+It fires once per outage and re-arms when the fetch recovers.
+
 When a webhook has a `secret`, the request is signed with HMAC-SHA256 over the raw body and sent as
 `X-Coolify-Green-Signature: sha256=<hex>` — verify it before trusting the payload. Delivery failures
 are never retried and never interrupt polling; run with `COOLIFY_GREEN_DEBUG=1` to see them on

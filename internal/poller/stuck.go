@@ -24,7 +24,7 @@ func stuckKey(ps state.ProjectState, resourceUUID, kind string) string {
 //
 // Callers must hold p.mu. Dispatch is left to the caller so the HTTP calls
 // happen outside the lock.
-func (p *Poller) evaluateStuck(projects []state.ProjectState) []webhooks.Event {
+func (p *Poller) evaluateStuck(projects []state.ProjectState, instances []state.InstanceState) []webhooks.Event {
 	threshold := time.Duration(p.cfg.Settings.StuckThresholdMinutes) * time.Minute
 	now := p.now()
 	seen := make(map[string]struct{}, len(p.stuck))
@@ -46,6 +46,31 @@ func (p *Poller) evaluateStuck(projects []state.ProjectState) []webhooks.Event {
 		}
 		entry.alerted = true
 		events = append(events, build(entry.since))
+	}
+
+	// A fetch that keeps failing is its own kind of stuck. Every row for the
+	// instance is frozen at whatever it showed when the fetch died, and the
+	// checks below deliberately skip that stale data, so without this a
+	// revoked token or a dead instance alerts nowhere at all.
+	for _, instance := range instances {
+		inst := instance
+		if inst.Err == nil {
+			continue
+		}
+		key := "instance|" + inst.Name + "|fetch"
+		track(key, webhooks.ReasonFetchFailed, func(since time.Time) webhooks.Event {
+			return webhooks.Event{
+				Event:        webhooks.EventFetchFailed,
+				Reason:       webhooks.ReasonFetchFailed,
+				Instance:     inst.Name,
+				ResourceType: "instance",
+				Resource:     inst.Name,
+				Detail:       inst.Err.Error(),
+				URL:          inst.URL,
+				StuckSince:   since,
+				Timestamp:    now,
+			}
+		})
 	}
 
 	for _, proj := range projects {

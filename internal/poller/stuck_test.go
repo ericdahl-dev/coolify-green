@@ -1,6 +1,7 @@
 package poller
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -51,17 +52,17 @@ func TestStuckFiresOnceAfterThreshold(t *testing.T) {
 	p, clock := stuckPoller(t)
 	projects := failedDeployProject()
 
-	if events := p.evaluateStuck(projects); len(events) != 0 {
+	if events := p.evaluateStuck(projects, nil); len(events) != 0 {
 		t.Fatalf("alerted before the threshold: %+v", events)
 	}
 
 	*clock = clock.Add(29 * time.Minute)
-	if events := p.evaluateStuck(projects); len(events) != 0 {
+	if events := p.evaluateStuck(projects, nil); len(events) != 0 {
 		t.Fatalf("alerted one minute early: %+v", events)
 	}
 
 	*clock = clock.Add(2 * time.Minute)
-	events := p.evaluateStuck(projects)
+	events := p.evaluateStuck(projects, nil)
 	if len(events) != 1 {
 		t.Fatalf("got %d events, want 1", len(events))
 	}
@@ -80,7 +81,7 @@ func TestStuckFiresOnceAfterThreshold(t *testing.T) {
 	}
 
 	*clock = clock.Add(time.Hour)
-	if events := p.evaluateStuck(projects); len(events) != 0 {
+	if events := p.evaluateStuck(projects, nil); len(events) != 0 {
 		t.Fatalf("re-alerted while still stuck: %+v", events)
 	}
 }
@@ -89,9 +90,9 @@ func TestRecoveryRearmsTheAlert(t *testing.T) {
 	p, clock := stuckPoller(t)
 	projects := failedDeployProject()
 
-	p.evaluateStuck(projects) // first sighting starts the clock
+	p.evaluateStuck(projects, nil) // first sighting starts the clock
 	*clock = clock.Add(31 * time.Minute)
-	if len(p.evaluateStuck(projects)) != 1 {
+	if len(p.evaluateStuck(projects, nil)) != 1 {
 		t.Fatal("first alert did not fire")
 	}
 
@@ -99,16 +100,16 @@ func TestRecoveryRearmsTheAlert(t *testing.T) {
 	healthy[0].Resources[0].Deploy.Status = "finished"
 	healthy[0].Resources[0].Deploy.Stoplight = aggregator.StoplightGreen
 	*clock = clock.Add(time.Minute)
-	if events := p.evaluateStuck(healthy); len(events) != 0 {
+	if events := p.evaluateStuck(healthy, nil); len(events) != 0 {
 		t.Fatalf("recovery should not alert: %+v", events)
 	}
 
 	*clock = clock.Add(time.Minute)
-	if events := p.evaluateStuck(projects); len(events) != 0 {
+	if events := p.evaluateStuck(projects, nil); len(events) != 0 {
 		t.Fatalf("clock should restart on the new incident: %+v", events)
 	}
 	*clock = clock.Add(31 * time.Minute)
-	if events := p.evaluateStuck(projects); len(events) != 1 {
+	if events := p.evaluateStuck(projects, nil); len(events) != 1 {
 		t.Fatalf("a fresh incident must alert again, got %d", len(events))
 	}
 }
@@ -119,9 +120,9 @@ func TestChangedReasonRestartsTheClock(t *testing.T) {
 	building[0].Resources[0].Deploy.Status = "in_progress"
 	building[0].Resources[0].Deploy.Stoplight = aggregator.StoplightYellow
 
-	p.evaluateStuck(building) // first sighting starts the clock
+	p.evaluateStuck(building, nil) // first sighting starts the clock
 	*clock = clock.Add(31 * time.Minute)
-	events := p.evaluateStuck(building)
+	events := p.evaluateStuck(building, nil)
 	if len(events) != 1 || events[0].Reason != webhooks.ReasonDeployInProgress {
 		t.Fatalf("events = %+v", events)
 	}
@@ -130,11 +131,11 @@ func TestChangedReasonRestartsTheClock(t *testing.T) {
 	// threshold rather than firing instantly off the old timer.
 	failed := failedDeployProject()
 	*clock = clock.Add(time.Minute)
-	if events := p.evaluateStuck(failed); len(events) != 0 {
+	if events := p.evaluateStuck(failed, nil); len(events) != 0 {
 		t.Fatalf("new reason should restart the clock: %+v", events)
 	}
 	*clock = clock.Add(31 * time.Minute)
-	if events := p.evaluateStuck(failed); len(events) != 1 {
+	if events := p.evaluateStuck(failed, nil); len(events) != 1 {
 		t.Fatalf("want one event after the new threshold, got %d", len(events))
 	}
 }
@@ -147,7 +148,7 @@ func TestStaleProjectsDoNotAlert(t *testing.T) {
 	projects[0].Err = errContext
 
 	*clock = clock.Add(2 * time.Hour)
-	if events := p.evaluateStuck(projects); len(events) != 0 {
+	if events := p.evaluateStuck(projects, nil); len(events) != 0 {
 		t.Fatalf("stale carried-forward data must not alert: %+v", events)
 	}
 }
@@ -167,9 +168,9 @@ func TestDownContainerAlerts(t *testing.T) {
 			Status: "exited", ContainerLight: aggregator.StoplightRed,
 		}},
 	}}
-	p.evaluateStuck(projects) // first sighting starts the clock
+	p.evaluateStuck(projects, nil) // first sighting starts the clock
 	*clock = clock.Add(31 * time.Minute)
-	events := p.evaluateStuck(projects)
+	events := p.evaluateStuck(projects, nil)
 	if len(events) != 1 {
 		t.Fatalf("got %d events", len(events))
 	}
@@ -190,9 +191,9 @@ func TestUnhealthyContainerHasItsOwnReason(t *testing.T) {
 			Status: "running:unhealthy", ContainerLight: aggregator.StoplightRed,
 		}},
 	}}
-	p.evaluateStuck(projects) // first sighting starts the clock
+	p.evaluateStuck(projects, nil) // first sighting starts the clock
 	*clock = clock.Add(31 * time.Minute)
-	events := p.evaluateStuck(projects)
+	events := p.evaluateStuck(projects, nil)
 	if len(events) != 1 || events[0].Reason != webhooks.ReasonResourceUnhealth {
 		t.Fatalf("events = %+v", events)
 	}
@@ -209,7 +210,7 @@ func TestHealthyStateNeverAlerts(t *testing.T) {
 		}},
 	}}
 	*clock = clock.Add(24 * time.Hour)
-	if events := p.evaluateStuck(projects); len(events) != 0 {
+	if events := p.evaluateStuck(projects, nil); len(events) != 0 {
 		t.Fatalf("healthy state alerted: %+v", events)
 	}
 }
@@ -219,5 +220,59 @@ func TestStuckKeysAreInstanceQualified(t *testing.T) {
 	b := state.ProjectState{Instance: "backup", UUID: "p1"}
 	if stuckKey(a, "r1", "resource") == stuckKey(b, "r1", "resource") {
 		t.Error("same resource on two instances must not share a stuck key")
+	}
+}
+
+func failingInstance(err error) []state.InstanceState {
+	return []state.InstanceState{{Name: "studio", URL: "https://coolify.test", Err: err}}
+}
+
+// A dead API token freezes every row on screen, and the checks above skip that
+// stale data, so the failing fetch has to alert on its own.
+func TestFailingFetchAlertsOnceAfterThreshold(t *testing.T) {
+	p, clock := stuckPoller(t)
+	down := failingInstance(errors.New("coolify: unauthorized"))
+
+	if events := p.evaluateStuck(nil, down); len(events) != 0 {
+		t.Fatalf("alerted before the threshold: %+v", events)
+	}
+	*clock = clock.Add(30 * time.Minute)
+	events := p.evaluateStuck(nil, down)
+	if len(events) != 1 {
+		t.Fatalf("got %d events at the threshold, want 1: %+v", len(events), events)
+	}
+	e := events[0]
+	if e.Event != webhooks.EventFetchFailed || e.Reason != webhooks.ReasonFetchFailed {
+		t.Errorf("event/reason = %q/%q, want fetch_failed", e.Event, e.Reason)
+	}
+	if e.Instance != "studio" || e.ResourceType != "instance" || e.Detail != "coolify: unauthorized" {
+		t.Errorf("event = %+v, want instance studio with the error in detail", e)
+	}
+	if !e.StuckSince.Equal(clock.Add(-30 * time.Minute)) {
+		t.Errorf("StuckSince = %v, want first failure", e.StuckSince)
+	}
+
+	*clock = clock.Add(10 * time.Minute)
+	if events := p.evaluateStuck(nil, down); len(events) != 0 {
+		t.Fatalf("alerted again while still failing: %+v", events)
+	}
+}
+
+func TestRecoveredFetchRearmsTheAlert(t *testing.T) {
+	p, clock := stuckPoller(t)
+	down := failingInstance(errors.New("dial tcp: timeout"))
+	p.evaluateStuck(nil, down)
+	*clock = clock.Add(30 * time.Minute)
+	if len(p.evaluateStuck(nil, down)) != 1 {
+		t.Fatal("expected the first alert")
+	}
+
+	if events := p.evaluateStuck(nil, failingInstance(nil)); len(events) != 0 {
+		t.Fatalf("recovery alerted: %+v", events)
+	}
+	p.evaluateStuck(nil, down)
+	*clock = clock.Add(30 * time.Minute)
+	if len(p.evaluateStuck(nil, down)) != 1 {
+		t.Fatal("a new outage after recovery should alert again")
 	}
 }
