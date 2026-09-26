@@ -30,6 +30,9 @@ project, application, service, and database on your instance, without a browser.
 - **Deploy log drill-down** — expand a resource to see the tail of its build log, fetched on
   demand, never during a poll
 - **Active-first sorting** — deploying and broken projects surface to the top automatically
+- **Auto-expand what needs attention** — a project opens on its own when it goes red or yellow, and
+  closes when it recovers. Collapse one by hand and it stays collapsed until its status actually
+  changes
 - **Auto-polling** — every 30 seconds by default; last-known state is retained and marked stale on
   API errors
 - **Smart fix** — one confirmed key press redeploys a failed build, starts a stopped resource,

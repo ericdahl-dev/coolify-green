@@ -86,7 +86,7 @@ func TestCollapsedProjectsHideResources(t *testing.T) {
 
 func TestExpandProjectShowsResources(t *testing.T) {
 	d := newTestDashboard()
-	d.cursor = 1 // Alpha, since Beta sorts first
+	d.cursor = 2 // Alpha: Beta sorts first and is open, being red
 	d, _ = d.Update(key("enter"))
 
 	out := d.BodyView()
@@ -128,9 +128,9 @@ func TestCollapsingClampsTheCursor(t *testing.T) {
 
 func TestSelectedResourceAndURL(t *testing.T) {
 	d := newTestDashboard()
-	d.cursor = 1 // Alpha
+	d.cursor = 2 // Alpha, below the open Beta
 	d, _ = d.Update(key("enter"))
-	d.cursor = 2 // alpha-web
+	d.cursor = 3 // alpha-web
 
 	r := d.SelectedResource()
 	if r == nil || r.Name != "alpha-web" {
@@ -158,9 +158,9 @@ func TestExpandingAResourceFetchesItsLog(t *testing.T) {
 		return []coolify.LogLine{{Output: "Build finished", Type: "stdout"}}, nil
 	}
 	d := NewDashboard(testSnapshot(), nil, fetcher, context.Background())
-	d.cursor = 1
+	d.cursor = 2
 	d, _ = d.Update(key("enter")) // expand Alpha
-	d.cursor = 2                  // alpha-web
+	d.cursor = 3                  // alpha-web
 	d, cmd := d.Update(key("enter"))
 
 	if cmd == nil {
@@ -221,7 +221,7 @@ func TestLogFetchErrorIsShown(t *testing.T) {
 	d := newTestDashboard()
 	d.resExpanded["studio/p1/a1"] = true
 	d, _ = d.Update(logsFetchedMsg{deploymentUUID: "dep1", err: errors.New("403 forbidden")})
-	d.cursor = 1
+	d.cursor = 2
 	d, _ = d.Update(key("enter"))
 	if !strings.Contains(d.BodyView(), "log unavailable: 403 forbidden") {
 		t.Errorf("log error not rendered:\n%s", d.BodyView())
@@ -278,7 +278,7 @@ func TestFixConfirmFlow(t *testing.T) {
 
 func TestFixIsNotOfferedForHealthyProject(t *testing.T) {
 	d := newTestDashboard()
-	d.cursor = 1 // Alpha, healthy
+	d.cursor = 2 // Alpha, healthy
 	d, _ = d.Update(key("f"))
 	if d.fixStatus != fixIdle {
 		t.Errorf("healthy project armed a fix: %+v", d.fixPlan)

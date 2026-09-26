@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ericdahl-dev/coolify-green/internal/aggregator"
 	"github.com/ericdahl-dev/coolify-green/internal/coolify"
 	"github.com/ericdahl-dev/coolify-green/internal/fix"
 	"github.com/ericdahl-dev/coolify-green/internal/state"
@@ -87,11 +88,15 @@ type logEntry struct {
 
 // Dashboard is the main screen.
 type Dashboard struct {
-	snapshot      state.Snapshot
-	cursor        int
-	expanded      map[string]bool // project key -> expanded
-	resExpanded   map[string]bool // project key + "/" + resource uuid -> expanded
-	logs          map[string]logEntry
+	snapshot    state.Snapshot
+	cursor      int
+	expanded    map[string]bool // project key -> expanded
+	resExpanded map[string]bool // project key + "/" + resource uuid -> expanded
+	logs        map[string]logEntry
+	// lastStoplight is the stoplight each project was last seen at, so
+	// auto-expansion can be edge-triggered. Level-triggering would re-open a
+	// row the user collapsed by hand on every poll.
+	lastStoplight map[string]aggregator.Stoplight
 	lastActivity  time.Time
 	selectionFade bool
 
@@ -111,15 +116,84 @@ type Dashboard struct {
 
 // NewDashboard builds the dashboard around an initial snapshot.
 func NewDashboard(snap state.Snapshot, actionerFactory ActionerFactory, logFetcher LogFetcher, ctx context.Context) Dashboard {
-	return Dashboard{
-		snapshot:        snap,
+	d := Dashboard{
 		expanded:        make(map[string]bool),
 		resExpanded:     make(map[string]bool),
 		logs:            make(map[string]logEntry),
+		lastStoplight:   make(map[string]aggregator.Stoplight),
 		lastActivity:    time.Now(),
 		actionerFactory: actionerFactory,
 		logFetcher:      logFetcher,
 		ctx:             ctx,
+	}
+	d.applySnapshot(snap)
+	return d
+}
+
+// needsAttention reports whether a project should have its row opened for the
+// user: something in it is broken or moving.
+func needsAttention(s aggregator.Stoplight) bool {
+	return s == aggregator.StoplightRed || s == aggregator.StoplightYellow
+}
+
+// applySnapshot installs a new snapshot, auto-expanding projects that have
+// just started needing attention and collapsing those that have recovered.
+// Expansion changes only when a project's stoplight changes (or on its first
+// sighting), so a row the user collapsed by hand stays collapsed until
+// something actually happens to it.
+func (d *Dashboard) applySnapshot(snap state.Snapshot) {
+	prev := d.currentNavItem()
+
+	d.snapshot = snap
+
+	seen := make(map[string]struct{}, len(snap.Projects))
+	for _, proj := range snap.Projects {
+		key := proj.Key()
+		seen[key] = struct{}{}
+		light := proj.Stoplight()
+		if last, ok := d.lastStoplight[key]; ok && last == light {
+			continue
+		}
+		d.lastStoplight[key] = light
+		d.expanded[key] = needsAttention(light)
+	}
+	// A project that disappeared is a first sighting again if it returns.
+	for key := range d.lastStoplight {
+		if _, ok := seen[key]; !ok {
+			delete(d.lastStoplight, key)
+		}
+	}
+
+	d.restoreCursor(prev)
+}
+
+// restoreCursor puts the cursor back on the row it was on before the rebuild.
+// Auto-expansion inserts rows above it, so the index alone is meaningless. A
+// resource row that disappeared falls back to its project row.
+func (d *Dashboard) restoreCursor(prev *navItem) {
+	items := d.buildNavList()
+	if prev == nil || len(items) == 0 {
+		if d.cursor >= len(items) {
+			d.cursor = max(len(items)-1, 0)
+		}
+		return
+	}
+	fallback := -1
+	for i, it := range items {
+		if it == *prev {
+			d.cursor = i
+			return
+		}
+		if fallback < 0 && it.kind == navProject && it.projKey == prev.projKey {
+			fallback = i
+		}
+	}
+	if fallback >= 0 {
+		d.cursor = fallback
+		return
+	}
+	if d.cursor >= len(items) {
+		d.cursor = len(items) - 1
 	}
 }
 
@@ -267,7 +341,7 @@ func (d Dashboard) Update(msg tea.Msg) (Dashboard, tea.Cmd) {
 		d.fixResultMsg = ""
 
 	case state.Snapshot:
-		d.snapshot = msg
+		d.applySnapshot(msg)
 		// Drop cached logs for deployments that are still running so the
 		// next expand shows fresh output rather than a frozen tail.
 		for _, proj := range msg.Projects {
@@ -276,9 +350,6 @@ func (d Dashboard) Update(msg tea.Msg) (Dashboard, tea.Cmd) {
 					delete(d.logs, r.Deploy.UUID)
 				}
 			}
-		}
-		if count := len(d.buildNavList()); d.cursor >= count && count > 0 {
-			d.cursor = count - 1
 		}
 	}
 	return d, nil
