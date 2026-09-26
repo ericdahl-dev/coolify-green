@@ -213,7 +213,7 @@ func (p *Poller) Poll(ctx context.Context, ch chan<- state.Snapshot) {
 	if len(inventory) > 0 || len(instances) > 0 {
 		p.inventory = inventory
 	}
-	events := p.evaluateStuck(projects)
+	events := p.evaluateStuck(projects, instances)
 	p.mu.Unlock()
 
 	// Dispatch outside the lock: a slow webhook endpoint must not stall

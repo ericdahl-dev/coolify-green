@@ -23,6 +23,7 @@ const SignatureHeader = "X-Coolify-Green-Signature"
 const (
 	EventDeploymentStuck = "deployment_stuck"
 	EventResourceStuck   = "resource_stuck"
+	EventFetchFailed     = "fetch_failed"
 )
 
 // Reasons carried in Event.Reason.
@@ -31,6 +32,7 @@ const (
 	ReasonDeployInProgress = "deploy_in_progress"
 	ReasonResourceDown     = "resource_down"
 	ReasonResourceUnhealth = "resource_unhealthy"
+	ReasonFetchFailed      = "fetch_failed"
 )
 
 // Event is the JSON payload POSTed to each webhook.
