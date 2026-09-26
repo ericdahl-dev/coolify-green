@@ -3,6 +3,7 @@ package coolify
 import (
 	"encoding/json"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 )
@@ -136,9 +137,43 @@ func (d Deployment) Trigger() string {
 
 // deploymentPage is the envelope returned by the per-application deployments
 // endpoint, which paginates while the instance-wide one returns a bare array.
+// deploymentList decodes Coolify's deployment list, which arrives as an array
+// normally but as an object keyed by index when the server filtered out some
+// entries: Laravel serializes a collection with gaps in its keys that way.
+type deploymentList []Deployment
+
+func (l *deploymentList) UnmarshalJSON(data []byte) error {
+	var list []Deployment
+	if err := json.Unmarshal(data, &list); err == nil {
+		*l = list
+		return nil
+	}
+	var keyed map[string]Deployment
+	if err := json.Unmarshal(data, &keyed); err != nil {
+		return err
+	}
+	keys := make([]string, 0, len(keyed))
+	for k := range keyed {
+		keys = append(keys, k)
+	}
+	// Keep the server's order: keys are indexes, so compare them as numbers.
+	sort.Slice(keys, func(i, j int) bool {
+		if len(keys[i]) != len(keys[j]) {
+			return len(keys[i]) < len(keys[j])
+		}
+		return keys[i] < keys[j]
+	})
+	list = make([]Deployment, 0, len(keys))
+	for _, k := range keys {
+		list = append(list, keyed[k])
+	}
+	*l = list
+	return nil
+}
+
 type deploymentPage struct {
-	Count       int          `json:"count"`
-	Deployments []Deployment `json:"deployments"`
+	Count       int            `json:"count"`
+	Deployments deploymentList `json:"deployments"`
 }
 
 // LogLine is one entry from a deployment's log stream. Coolify stores these as

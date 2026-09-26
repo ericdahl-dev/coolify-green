@@ -3,6 +3,7 @@ package coolify
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -294,5 +295,34 @@ func TestApplicationUUIDFromDeploymentURL(t *testing.T) {
 	}
 	if got := (Deployment{DeploymentURL: "/nope"}).ApplicationUUID(); got != "" {
 		t.Errorf("unexpected url shape should yield empty uuid, got %q", got)
+	}
+}
+
+// Coolify filters its deployment list server-side and Laravel serializes a
+// filtered collection with gaps in its keys as an object, not an array.
+func TestActiveDeploymentsAcceptsKeyedObject(t *testing.T) {
+	for name, body := range map[string]string{
+		"array":  `[{"deployment_uuid":"dep1","status":"in_progress"},{"deployment_uuid":"dep2","status":"queued"}]`,
+		"object": `{"3":{"deployment_uuid":"dep1","status":"in_progress"},"7":{"deployment_uuid":"dep2","status":"queued"}}`,
+		"empty":  `{}`,
+	} {
+		c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			_, _ = w.Write([]byte(body))
+		})
+		got, err := c.ActiveDeployments(context.Background())
+		if err != nil {
+			t.Fatalf("%s: ActiveDeployments: %v", name, err)
+		}
+		var uuids []string
+		for _, d := range got {
+			uuids = append(uuids, d.UUID)
+		}
+		want := "[dep1 dep2]"
+		if name == "empty" {
+			want = "[]"
+		}
+		if fmt.Sprint(uuids) != want {
+			t.Errorf("%s: got %v, want %s", name, uuids, want)
+		}
 	}
 }
