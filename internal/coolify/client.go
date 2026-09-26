@@ -177,8 +177,11 @@ func (c *Client) Databases(ctx context.Context) ([]Resource, error) {
 // across every application. This is one call for the whole instance, which is
 // what makes per-cycle polling cheap.
 func (c *Client) ActiveDeployments(ctx context.Context) ([]Deployment, error) {
-	var out []Deployment
-	return out, c.do(ctx, http.MethodGet, "/deployments", &out)
+	var out deploymentList
+	if err := c.do(ctx, http.MethodGet, "/deployments", &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // LatestDeployment returns the most recent deployment for an application, or
