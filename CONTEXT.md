@@ -16,11 +16,11 @@ _Avoid_: app, stack, group
 by integer id; only the per-project detail endpoint reveals which Project owns it.
 
 **Resource**: An Application, Service, or Database. The three come from three endpoints with
-overlapping shapes and are modelled as one type carrying a Kind.
+overlapping shapes and are modeled as one type carrying a Kind.
 _Avoid_: container, workload
 
 **Deployment**: One deploy of an Application. Has a Status (`queued`, `in_progress`, `finished`,
-`failed`, `cancelled-by-user`) and inlines its whole build log.
+`failed`, `cancelled-by-user`) and inlines its whole build log. <!-- spelling: ok (Coolify API status value) -->
 _Avoid_: build, release, run
 
 **Container status**: Coolify's `"<state>:<health>"` string on a Resource, e.g. `running:healthy`,
@@ -57,7 +57,7 @@ so a running app whose last deploy failed still reads red.
 | 🟢 Green | Healthy | `running:healthy`, `running:unknown`, deployment `finished` |
 | 🔴 Red | Broken | `running:unhealthy`, `exited`, `stopped`, `degraded`, deployment `failed` |
 | 🟡 Yellow | In flight | deployment `queued` / `in_progress`, `restarting`, `running:starting` |
-| ⚪ Grey | No signal | empty or unrecognised status, deployment `cancelled-by-user` |
+| ⚪ Gray | No signal | empty or unrecognized status, deployment `cancelled-by-user` <!-- spelling: ok (Coolify API status value) --> |
 
 `running:unknown` is green, not a warning: it is what Coolify reports for every resource with no
 health check configured, which is most of them.

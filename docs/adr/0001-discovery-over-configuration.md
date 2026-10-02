@@ -5,7 +5,7 @@
 
 ## Context
 
-coolify-green is modelled on aws-green, where the config file names every pipeline, stack, and ECS
+coolify-green is modeled on aws-green, where the config file names every pipeline, stack, and ECS
 service to watch. That works for AWS because there is no single call that answers "what does this
 account deploy?" — you have to know what you are looking for.
 

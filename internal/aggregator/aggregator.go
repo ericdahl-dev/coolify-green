@@ -7,7 +7,7 @@ import "strings"
 type Stoplight int
 
 const (
-	StoplightGrey   Stoplight = iota // unknown, or nothing deployed yet
+	StoplightGray   Stoplight = iota // unknown, or nothing deployed yet
 	StoplightGreen                   // running, last deployment finished
 	StoplightYellow                  // deploying, starting, restarting
 	StoplightRed                     // down, unhealthy, or last deployment failed
@@ -34,7 +34,7 @@ const (
 	DeployInProgress DeployStatus = "in_progress"
 	DeployFinished   DeployStatus = "finished"
 	DeployFailed     DeployStatus = "failed"
-	DeployCancelled  DeployStatus = "cancelled-by-user"
+	DeployCanceled   DeployStatus = "cancelled-by-user" // spelling: ok (Coolify API status value)
 )
 
 // InFlight reports whether a deployment is still running or waiting to run.
@@ -51,10 +51,10 @@ func DeployStoplight(status string) Stoplight {
 		return StoplightYellow
 	case DeployFailed:
 		return StoplightRed
-	case DeployCancelled:
-		return StoplightGrey
+	case DeployCanceled:
+		return StoplightGray
 	default:
-		return StoplightGrey
+		return StoplightGray
 	}
 }
 
@@ -92,14 +92,14 @@ func ContainerStoplight(status string) Stoplight {
 	case "exited", "stopped", "dead", "paused", "removing", "degraded":
 		return StoplightRed
 	default:
-		return StoplightGrey
+		return StoplightGray
 	}
 }
 
 // Aggregate returns the worst-case Stoplight across the provided lights.
-// Red > Yellow > Green > Grey.
+// Red > Yellow > Green > Gray.
 func Aggregate(lights ...Stoplight) Stoplight {
-	worst := StoplightGrey
+	worst := StoplightGray
 	for _, l := range lights {
 		if l > worst {
 			worst = l

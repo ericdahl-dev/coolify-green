@@ -27,7 +27,7 @@ const (
 // not given.
 var DefaultWatch = []string{"applications", "services", "databases"}
 
-// Settings holds instance-wide polling behaviour.
+// Settings holds instance-wide polling behavior.
 type Settings struct {
 	PollInterval int `toml:"poll_interval_seconds"`
 	// StuckThresholdMinutes is how long a resource stays broken or a deploy

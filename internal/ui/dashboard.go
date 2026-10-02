@@ -520,7 +520,7 @@ func (d Dashboard) bodyLines() ([]string, int) {
 	return lines, cursorLine
 }
 
-// window trims the rendered rows to what fits on screen, centred on the
+// window trims the rendered rows to what fits on screen, centered on the
 // cursor. The title, the blank separator, and the hint line live outside the
 // body, so the budget is the terminal height less three.
 func (d Dashboard) window(lines []string, cursorLine int) []string {

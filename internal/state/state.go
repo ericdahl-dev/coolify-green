@@ -157,7 +157,7 @@ func (p ProjectState) Stoplight() aggregator.Stoplight {
 
 // KindSummary returns the worst stoplight and count for one resource kind.
 func (p ProjectState) KindSummary(kind coolify.Kind) (aggregator.Stoplight, int) {
-	worst := aggregator.StoplightGrey
+	worst := aggregator.StoplightGray
 	count := 0
 	for _, r := range p.Resources {
 		if r.Kind != kind {

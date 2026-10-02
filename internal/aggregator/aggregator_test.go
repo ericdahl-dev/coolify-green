@@ -17,8 +17,8 @@ func TestContainerStoplight(t *testing.T) {
 		{"exited", StoplightRed},
 		{"stopped", StoplightRed},
 		{"degraded", StoplightRed},
-		{"", StoplightGrey},
-		{"who-knows", StoplightGrey},
+		{"", StoplightGray},
+		{"who-knows", StoplightGray},
 		{"  Running:Healthy  ", StoplightGreen},
 	}
 	for _, tc := range tests {
@@ -37,8 +37,8 @@ func TestDeployStoplight(t *testing.T) {
 		{"in_progress", StoplightYellow},
 		{"queued", StoplightYellow},
 		{"failed", StoplightRed},
-		{"cancelled-by-user", StoplightGrey},
-		{"", StoplightGrey},
+		{"cancelled-by-user", StoplightGray}, // spelling: ok (Coolify API status value)
+		{"", StoplightGray},
 	}
 	for _, tc := range tests {
 		if got := DeployStoplight(tc.status); got != tc.want {
@@ -57,8 +57,8 @@ func TestInFlight(t *testing.T) {
 }
 
 func TestAggregate(t *testing.T) {
-	if got := Aggregate(); got != StoplightGrey {
-		t.Errorf("empty Aggregate = %v, want grey", got)
+	if got := Aggregate(); got != StoplightGray {
+		t.Errorf("empty Aggregate = %v, want gray", got)
 	}
 	if got := Aggregate(StoplightGreen, StoplightRed, StoplightYellow); got != StoplightRed {
 		t.Errorf("Aggregate = %v, want red", got)
@@ -69,7 +69,7 @@ func TestAggregate(t *testing.T) {
 }
 
 func TestSortPriorityPutsInProgressFirst(t *testing.T) {
-	order := []Stoplight{StoplightYellow, StoplightRed, StoplightGreen, StoplightGrey}
+	order := []Stoplight{StoplightYellow, StoplightRed, StoplightGreen, StoplightGray}
 	for i := 1; i < len(order); i++ {
 		if SortPriority(order[i-1]) >= SortPriority(order[i]) {
 			t.Fatalf("priority order broken at %d: %v vs %v", i, order[i-1], order[i])
