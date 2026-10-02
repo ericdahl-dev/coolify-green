@@ -34,8 +34,8 @@ func TestProjectStoplightIsWorstResource(t *testing.T) {
 	if got := p.Stoplight(); got != aggregator.StoplightRed {
 		t.Errorf("got %v", got)
 	}
-	if got := (ProjectState{}).Stoplight(); got != aggregator.StoplightGrey {
-		t.Errorf("empty project should be grey, got %v", got)
+	if got := (ProjectState{}).Stoplight(); got != aggregator.StoplightGray {
+		t.Errorf("empty project should be gray, got %v", got)
 	}
 }
 
@@ -50,7 +50,7 @@ func TestKindSummary(t *testing.T) {
 		t.Errorf("apps: %v %d", light, count)
 	}
 	light, count = p.KindSummary(coolify.KindDatabase)
-	if light != aggregator.StoplightGrey || count != 0 {
+	if light != aggregator.StoplightGray || count != 0 {
 		t.Errorf("databases: %v %d", light, count)
 	}
 }
@@ -69,12 +69,12 @@ func TestKeyIsInstanceQualified(t *testing.T) {
 func TestSortedProjectsPutsDeployingFirst(t *testing.T) {
 	projects := []ProjectState{
 		{Name: "green", Resources: []ResourceState{{ContainerLight: aggregator.StoplightGreen}}},
-		{Name: "grey"},
+		{Name: "gray"},
 		{Name: "red", Resources: []ResourceState{{ContainerLight: aggregator.StoplightRed}}},
 		{Name: "yellow", Resources: []ResourceState{{ContainerLight: aggregator.StoplightYellow}}},
 	}
 	order := SortedProjects(projects)
-	want := []string{"yellow", "red", "green", "grey"}
+	want := []string{"yellow", "red", "green", "gray"}
 	for i, idx := range order {
 		if projects[idx].Name != want[i] {
 			t.Fatalf("position %d = %q, want %q", i, projects[idx].Name, want[i])

@@ -49,8 +49,8 @@ func deployStatusLabel(status string) (string, lipgloss.Style) {
 		return "↻ queued", confirmStyle
 	case aggregator.DeployFailed:
 		return "✗ deploy failed", errorStyle
-	case aggregator.DeployCancelled:
-		return "⊘ deploy cancelled", staleStyle
+	case aggregator.DeployCanceled:
+		return "⊘ deploy canceled", staleStyle
 	case "":
 		return "", staleStyle
 	default:

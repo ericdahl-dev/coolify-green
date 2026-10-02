@@ -248,9 +248,9 @@ func TestFixConfirmFlow(t *testing.T) {
 	}
 
 	// esc cancels without acting.
-	cancelled, _ := d.Update(tea.KeyMsg{Type: tea.KeyEsc})
-	if cancelled.fixStatus != fixIdle || executed {
-		t.Errorf("esc should cancel the fix (status=%v executed=%v)", cancelled.fixStatus, executed)
+	canceled, _ := d.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if canceled.fixStatus != fixIdle || executed {
+		t.Errorf("esc should cancel the fix (status=%v executed=%v)", canceled.fixStatus, executed)
 	}
 
 	// enter runs it.

@@ -71,7 +71,7 @@ func TestLoadRejectsBadInput(t *testing.T) {
 	}
 }
 
-func TestWatchesKindHonoursSetting(t *testing.T) {
+func TestWatchesKindHonorsSetting(t *testing.T) {
 	cfg, err := Load(writeConfig(t, `
 [settings]
 watch = ["apps"]

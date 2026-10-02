@@ -17,7 +17,7 @@ func project(uuid, name string, light aggregator.Stoplight) state.ProjectState {
 		aggregator.StoplightGreen:  "running:healthy",
 		aggregator.StoplightYellow: "starting:unknown",
 		aggregator.StoplightRed:    "exited:unhealthy",
-		aggregator.StoplightGrey:   "",
+		aggregator.StoplightGray:   "",
 	}[light]
 	return state.ProjectState{
 		Instance: "studio", InstanceURL: "https://coolify.test",
